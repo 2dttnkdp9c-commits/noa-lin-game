@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#151a46" />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Noa Lin Quest" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+
+  <title>Noa Lin's Big Diploma Quest - 手机版</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root {
+      --bg: #0f1230;
+      --panel: #1b2148;
+      --gold: #f7c948;
+      --red: #d63b3b;
+      --sky: #5cb6ff;
+      --green: #4a9b52;
+      --ink: #101018;
+      --light: #fff6d6;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; height: 100%; background: linear-gradient(#121733, #090b1c);
+      font-family: "Courier New", monospace; color: #fff; overflow: hidden;
+      touch-action: none;
+    }
+    body { display: flex; align-items: center; justify-content: center; }
+    #app {
+      width: min(100vw, 500px);
+      height: 100vh;
+      max-height: 980px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #0d1130;
+      overflow: hidden;
+      border-left: 3px solid #3b2d1f;
+      border-right: 3px solid #3b2d1f;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 9 / 16;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+      background: #6ec1ff;
+      flex: 1 1 auto;
+    }
+    #overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 18px;
+      background: linear-gradient(rgba(6,10,35,.9), rgba(7,8,28,.95));
+      text-align: center; z-index: 10;
+    }
+    #overlay.hidden { display: none; }
+    .panel {
+      width: min(92%, 430px);
+      background: rgba(19, 24, 56, .96);
+      border: 4px solid #f6c34b;
+      box-shadow: 0 0 0 4px #472c17, 0 14px 30px rgba(0,0,0,.35);
+      padding: 14px;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+    }
+    .poster {
+      width: 100%; border: 3px solid #5d3a18; display: block; margin-bottom: 10px;
+      image-rendering: pixelated;
+      border-radius: 8px;
+    }
+    h1 {
+      margin: 4px 0 10px; font-size: 28px; line-height: 1.05; color: #ffd45f;
+      text-shadow: 2px 2px 0 #5f2d13;
+    }
+    p { margin: 8px 0; font-size: 14px; line-height: 1.4; }
+    .btnRow { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+    .btn {
+      appearance: none; border: 0; cursor: pointer; color: white;
+      background: linear-gradient(#ff6c5c, #cc2f39);
+      border: 3px solid #ffd560; box-shadow: 0 4px 0 #5f2d13;
+      padding: 12px 18px; border-radius: 12px;
+      font-weight: bold; font-size: 18px; font-family: inherit;
+    }
+    .btn.alt { background: linear-gradient(#4661d7, #243a92); }
+    .btn.ghost { background: linear-gradient(#253157, #1a2144); }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #5f2d13; }
+    .sub { opacity: 0.9; font-size: 12px; }
+    #controls {
+      flex: 0 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      padding: max(12px, env(safe-area-inset-bottom));
+      background: rgba(6,7,18,.92); border-top: 3px solid #4a3150;
+      z-index: 5;
+      user-select: none;
+    }
+    .pad, .action {
+      display: flex; gap: 12px; justify-content: center; align-items: center;
+    }
+    .touchBtn {
+      width: 80px; height: 80px; border-radius: 18px; border: 3px solid #efc44d;
+      background: linear-gradient(#24316c, #16214f);
+      color: #fff; font-size: 30px; font-weight: bold; box-shadow: inset 0 0 0 2px #485ca5;
+    }
+    .touchBtn:active, .touchBtn.on { background: linear-gradient(#4154a6, #1d2b69); }
+    .jump { background: linear-gradient(#d94f55, #9a2236); }
+    .smallnote { font-size: 11px; opacity: .85; margin-top: 6px; }
+    #topHint, #toast {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      z-index: 6; background: rgba(19,24,56,.92); border: 2px solid #ffd45f;
+      padding: 6px 10px; font-size: 12px; border-radius: 10px; pointer-events: none;
+    }
+    #topHint { top: 8px; }
+    #toast { top: 42px; opacity: 0; transition: opacity .2s ease; }
+    #toast.show { opacity: 1; }
+    .chips { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+    .chip { border:2px solid #efc44d; border-radius:999px; padding:5px 10px; font-size:12px; background:#202955; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="topHint">竖屏最佳；支持触控、键盘，也可“添加到主屏幕”</div>
+    <div id="toast"></div>
+    <canvas id="game" width="432" height="768"></canvas>
+    <div id="controls">
+      <div class="pad">
+        <button class="touchBtn" id="leftBtn">◀</button>
+        <button class="touchBtn" id="rightBtn">▶</button>
+      </div>
+      <div class="action">
+        <button class="touchBtn jump" id="jumpBtn">⤒</button>
+      </div>
+    </div>
+    <div id="overlay">
+      <div class="panel" id="panelContent">
+        <img class="poster" src="poster.png" alt="游戏海报" onerror="this.style.display='none';document.getElementById('posterFallback').style.display='flex';" />
+        <div id="posterFallback" class="poster" style="display:none;align-items:center;justify-content:center;background:#151a46;color:#fff6d6;height:260px;font-size:20px;font-weight:bold;">Noa Lin\'s Big Diploma Quest</div>
+        <h1>Noa Lin's<br>Big Diploma Quest</h1>
+        <p>升级版手机版像素小游戏：收集 <b>5 个卷轴</b> 和 <b>8 颗星星</b>，躲开打瞌睡乌鸦，冲到右侧钟楼终点，解锁未来。</p>
+        <div class="chips">
+          <span class="chip">音效</span>
+          <span class="chip">本地最佳成绩</span>
+          <span class="chip">可安装 PWA</span>
+        </div>
+        <div class="btnRow">
+          <button class="btn" id="startBtn">开始游戏</button>
+          <button class="btn alt" id="soundBtn">音效：开</button>
+          <button class="btn ghost" id="installBtn" style="display:none">安装到手机</button>
+        </div>
+        <p class="sub">操作：左 / 右 / 跳跃。电脑也支持 A D / ← → / 空格。</p>
+        <div class="smallnote">小彩蛋：收集完所有物品后，旗帜会亮起，钟楼会鸣响。<br>iPhone 安装：请先放到一个 HTTPS 网页地址，再用 Safari 打开并“添加到主屏幕”。</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const overlay = document.getElementById('overlay');
+    const panelContent = document.getElementById('panelContent');
+    const startBtn = document.getElementById('startBtn');
+    const soundBtn = document.getElementById('soundBtn');
+    const installBtn = document.getElementById('installBtn');
+    const toast = document.getElementById('toast');
+
+    const W = canvas.width, H = canvas.height;
+    const worldWidth = 1920;
+    const gravity = 0.52;
+    const bestKey = 'noa-lin-best-time-v2';
+    let deferredPrompt = null;
+
+    const input = { left: false, right: false, jump: false };
+    const keysDown = new Set();
+
+    const colors = {
+      sky1: '#60b6ff', sky2: '#ccecff', cloud: '#f7f7ff',
+      stone: '#92765d', stoneDark: '#5d4737', ivy: '#2a8b50',
+      red: '#dd4040', redDark: '#8b1e2f', gold: '#f5c54d',
+      blue: '#273d87', blue2: '#5c7dd6', ink: '#161421',
+      cream: '#fff3cf', grass: '#4daa59', brown: '#653e24'
+    };
+
+    const audio = {
+      enabled: true,
+      ctx: null,
+      ensure() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      },
+      tone(freq=440, dur=0.08, type='square', vol=0.03, when=0) {
+        if (!this.enabled) return;
+        this.ensure();
+        const t = this.ctx.currentTime + when;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, t);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(gain).connect(this.ctx.destination);
+        osc.start(t); osc.stop(t + dur + 0.02);
+      },
+      coin() { this.tone(1046, 0.06, 'square', 0.028); this.tone(1318, 0.08, 'square', 0.02, 0.04); },
+      scroll() { this.tone(392, 0.05, 'triangle', 0.02); this.tone(587, 0.09, 'triangle', 0.02, 0.04); },
+      jump() { this.tone(330, 0.06, 'square', 0.02); },
+      hit() { this.tone(160, 0.12, 'sawtooth', 0.025); },
+      unlock() { [523,659,784,1046].forEach((f,i)=>this.tone(f, 0.12, 'triangle', 0.022, i*0.05)); },
+      clear() { [523,659,784,1046,1318,1568].forEach((f,i)=>this.tone(f, 0.15, 'square', 0.022, i*0.06)); }
+    };
+
+    const game = {
+      state: 'start',
+      cameraX: 0,
+      messageTimer: 0,
+      clearFlash: 0,
+      confetti: [],
+      starsCollected: 0,
+      diplomasCollected: 0,
+      goalUnlocked: false,
+      time: 0,
+      bestTime: Number(localStorage.getItem(bestKey)) || null,
+      unlockFired: false,
+      bellPhase: 0,
+    };
+
+    const player = {
+      x: 60, y: 0, w: 28, h: 44,
+      vx: 0, vy: 0,
+      onGround: false,
+      facing: 1,
+      invuln: 0,
+      step: 0,
+    };
+
+    const platforms = [
+      {x: 0, y: 690, w: 430, h: 90},
+      {x: 460, y: 690, w: 240, h: 90},
+      {x: 760, y: 620, w: 130, h: 24},
+      {x: 940, y: 560, w: 150, h: 24},
+      {x: 1130, y: 690, w: 200, h: 90},
+      {x: 1360, y: 620, w: 130, h: 24},
+      {x: 1530, y: 690, w: 390, h: 90},
+      {x: 1670, y: 560, w: 110, h: 20},
+    ];
+
+    const stars = [
+      {x: 140, y: 620}, {x: 235, y: 610}, {x: 545, y: 620}, {x: 830, y: 560},
+      {x: 998, y: 500}, {x: 1200, y: 620}, {x: 1430, y: 565}, {x: 1718, y: 500}
+    ].map(s => ({...s, got: false, bob: Math.random() * Math.PI * 2}));
+
+    const diplomas = [
+      {x: 315, y: 625}, {x: 815, y: 555}, {x: 1045, y: 495}, {x: 1450, y: 560}, {x: 1830, y: 625}
+    ].map(d => ({...d, got: false}));
+
+    const enemies = [
+      {x: 620, y: 646, w: 26, h: 20, vx: -0.8, min: 500, max: 665, flap: 0},
+      {x: 1210, y: 646, w: 26, h: 20, vx: 0.9, min: 1150, max: 1290, flap: 2},
+      {x: 1600, y: 646, w: 26, h: 20, vx: -1.0, min: 1545, max: 1860, flap: 1.4},
+    ];
+
+    const goal = { x: 1848, y: 466, w: 42, h: 160 };
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+    }
+
+    function saveBest() {
+      if (game.bestTime !== null) localStorage.setItem(bestKey, String(game.bestTime));
+    }
+
+    function resetGame() {
+      game.state = 'playing';
+      game.cameraX = 0;
+      game.messageTimer = 180;
+      game.clearFlash = 0;
+      game.confetti = [];
+      game.starsCollected = 0;
+      game.diplomasCollected = 0;
+      game.goalUnlocked = false;
+      game.unlockFired = false;
+      game.time = 0;
+      game.bellPhase = 0;
+      player.x = 60; player.y = 580; player.vx = 0; player.vy = 0; player.onGround = false; player.facing = 1; player.invuln = 0;
+      stars.forEach(s => s.got = false);
+      diplomas.forEach(d => d.got = false);
+      enemies[0].x = 620; enemies[1].x = 1210; enemies[2].x = 1600;
+      overlay.classList.add('hidden');
+    }
+
+    function openStartPanel() {
+      panelContent.innerHTML = `
+        <img class="poster" src="poster.png" alt="游戏海报" onerror="this.style.display='none';document.getElementById('posterFallback').style.display='flex';" />
+        <div id="posterFallback" class="poster" style="display:none;align-items:center;justify-content:center;background:#151a46;color:#fff6d6;height:260px;font-size:20px;font-weight:bold;">Noa Lin\'s Big Diploma Quest</div>
+        <h1>Noa Lin's<br>Big Diploma Quest</h1>
+        <p>升级版手机版像素小游戏：收集 <b>5 个卷轴</b> 和 <b>8 颗星星</b>，躲开打瞌睡乌鸦，冲到右侧钟楼终点，解锁未来。</p>
+        <div class="chips">
+          <span class="chip">音效</span>
+          <span class="chip">本地最佳成绩</span>
+          <span class="chip">可安装 PWA</span>
+        </div>
+        <div class="btnRow">
+          <button class="btn" id="startBtn">开始游戏</button>
+          <button class="btn alt" id="soundBtn">音效：${audio.enabled ? '开' : '关'}</button>
+          <button class="btn ghost" id="installBtn" style="display:${deferredPrompt ? 'inline-block' : 'none'}">安装到手机</button>
+        </div>
+        <p class="sub">操作：左 / 右 / 跳跃。电脑也支持 A D / ← → / 空格。</p>
+        <div class="smallnote">当前最佳：${game.bestTime ? game.bestTime.toFixed(1) + ' 秒' : '还没有记录，来跑一个！'}</div>`;
+      overlay.classList.remove('hidden');
+      document.getElementById('startBtn').addEventListener('click', ()=>{ audio.ensure(); resetGame(); });
+      document.getElementById('soundBtn').addEventListener('click', ()=>{
+        audio.enabled = !audio.enabled;
+        openStartPanel();
+      });
+      const ib = document.getElementById('installBtn');
+      if (ib) ib.addEventListener('click', installApp);
+    }
+
+    function openClearPanel() {
+      panelContent.innerHTML = `
+        <img class="poster" src="poster.png" alt="通关海报" />
+        <h1>LEVEL CLEAR!</h1>
+        <p><b>Noa Lin</b> 已成功毕业，未来正在加载中。</p>
+        <p>通关时间：<b>${game.time.toFixed(1)} 秒</b>${game.bestTime ? `｜最佳：<b>${game.bestTime.toFixed(1)} 秒</b>` : ''}</p>
+        <p class="sub">风趣结算：你没有打败任何怪物，只是优雅地收服了所有作业。</p>
+        <div class="btnRow">
+          <button class="btn" id="restartBtn">再玩一局</button>
+          <button class="btn ghost" id="menuBtn">返回首页</button>
+        </div>
+        <div class="smallnote">目标：收集全部星星与卷轴，再触碰右侧钟楼旗帜。</div>`;
+      overlay.classList.remove('hidden');
+      document.getElementById('restartBtn').addEventListener('click', resetGame);
+      document.getElementById('menuBtn').addEventListener('click', openStartPanel);
+    }
+
+    function installApp() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.finally(() => {
+        deferredPrompt = null;
+        const btn = document.getElementById('installBtn');
+        if (btn) btn.style.display = 'none';
+      });
+    }
+
+    openStartPanel();
+
+    function bindTouch(el, prop) {
+      const on = e => { e.preventDefault(); input[prop] = true; el.classList.add('on'); };
+      const off = e => { e.preventDefault(); input[prop] = false; el.classList.remove('on'); };
+      ['touchstart','mousedown'].forEach(ev => el.addEventListener(ev, on));
+      ['touchend','touchcancel','mouseup','mouseleave'].forEach(ev => el.addEventListener(ev, off));
+    }
+    bindTouch(document.getElementById('leftBtn'), 'left');
+    bindTouch(document.getElementById('rightBtn'), 'right');
+    bindTouch(document.getElementById('jumpBtn'), 'jump');
+
+    window.addEventListener('keydown', e => {
+      keysDown.add(e.key.toLowerCase());
+      if (['arrowleft','arrowright','arrowup',' ','a','d','w'].includes(e.key.toLowerCase()) || ['ArrowLeft','ArrowRight','ArrowUp',' '].includes(e.key)) e.preventDefault();
+    }, {passive:false});
+    window.addEventListener('keyup', e => keysDown.delete(e.key.toLowerCase()));
+
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('installBtn');
+      if (btn) btn.style.display = 'inline-block';
+      showToast('可安装到主屏幕啦');
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+    }
+
+    function updateInputFromKeyboard() {
+      input.left = input.left || keysDown.has('a') || keysDown.has('arrowleft');
+      input.right = input.right || keysDown.has('d') || keysDown.has('arrowright');
+      input.jump = input.jump || keysDown.has('w') || keysDown.has('arrowup') || keysDown.has(' ');
+    }
+
+    function rectsOverlap(a, b) {
+      return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    }
+
+    function spawnConfettiBurst(x, y, amount) {
+      for (let i = 0; i < amount; i++) {
+        game.confetti.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 5,
+          vy: -Math.random() * 4 - 1,
+          life: 60 + Math.random() * 30,
+          c: ['#ffda58','#ff5b7f','#63d6ff','#8dfc85','#ffffff'][Math.floor(Math.random() * 5)]
+        });
+      }
+    }
+
+    function update() {
+      if (game.state !== 'playing') return;
+      game.time += 1/60;
+      game.bellPhase += 0.08;
+      if (game.messageTimer > 0) game.messageTimer--;
+      if (game.clearFlash > 0) game.clearFlash--;
+      if (player.invuln > 0) player.invuln--;
+
+      input.left = document.getElementById('leftBtn').classList.contains('on');
+      input.right = document.getElementById('rightBtn').classList.contains('on');
+      input.jump = document.getElementById('jumpBtn').classList.contains('on');
+      updateInputFromKeyboard();
+
+      const accel = 0.55;
+      if (input.left && !input.right) { player.vx -= accel; player.facing = -1; }
+      else if (input.right && !input.left) { player.vx += accel; player.facing = 1; }
+      else { player.vx *= 0.82; }
+      player.vx = Math.max(-3.6, Math.min(3.6, player.vx));
+
+      if (input.jump && player.onGround) {
+        player.vy = -9.7;
+        player.onGround = false;
+        audio.jump();
+      }
+
+      player.vy += gravity;
+      player.x += player.vx;
+      player.y += player.vy;
+      player.step += Math.abs(player.vx);
+
+      player.onGround = false;
+      for (const p of platforms) {
+        if (player.x + player.w > p.x && player.x < p.x + p.w && player.y + player.h > p.y && player.y + player.h < p.y + 18 && player.vy >= 0) {
+          player.y = p.y - player.h;
+          player.vy = 0;
+          player.onGround = true;
+        }
+      }
+
+      if (player.y > H + 120) {
+        player.x = Math.max(40, player.x - 60);
+        player.y = 200;
+        player.vx = 0; player.vy = 0;
+        showToast('小心台阶，重新落地！');
+      }
+      player.x = Math.max(0, Math.min(worldWidth - player.w, player.x));
+
+      stars.forEach(s => {
+        s.bob += 0.08;
+        if (!s.got && rectsOverlap(player, {x:s.x-9, y:s.y-9, w:18, h:18})) {
+          s.got = true; game.starsCollected++; spawnConfettiBurst(s.x, s.y, 8); audio.coin();
+        }
+      });
+      diplomas.forEach(d => {
+        if (!d.got && rectsOverlap(player, {x:d.x-10, y:d.y-12, w:20, h:24})) {
+          d.got = true; game.diplomasCollected++; spawnConfettiBurst(d.x, d.y, 12); audio.scroll();
+        }
+      });
+
+      const prevUnlocked = game.goalUnlocked;
+      game.goalUnlocked = game.starsCollected === stars.length && game.diplomasCollected === diplomas.length;
+      if (game.goalUnlocked && !prevUnlocked && !game.unlockFired) {
+        game.unlockFired = true;
+        audio.unlock();
+        spawnConfettiBurst(goal.x + 20, goal.y + 24, 40);
+        showToast('旗帜已点亮，冲向钟楼！');
+      }
+
+      enemies.forEach(e => {
+        e.x += e.vx;
+        if (e.x < e.min || e.x > e.max) e.vx *= -1;
+        e.flap += 0.12;
+        const hitBox = {x:e.x, y:e.y, w:e.w, h:e.h};
+        if (player.invuln <= 0 && rectsOverlap(player, hitBox)) {
+          player.invuln = 75;
+          player.vx = player.x < e.x ? -4.5 : 4.5;
+          player.vy = -4.5;
+          game.starsCollected = Math.max(0, game.starsCollected - 1);
+          audio.hit();
+          showToast('乌鸦抢走了一颗星星！');
+        }
+      });
+
+      if (game.goalUnlocked && rectsOverlap(player, goal)) {
+        game.state = 'cleared';
+        game.clearFlash = 240;
+        if (game.bestTime === null || game.time < game.bestTime) game.bestTime = game.time;
+        saveBest();
+        audio.clear();
+        spawnConfettiBurst(player.x + player.w/2, player.y, 120);
+        setTimeout(openClearPanel, 850);
+      }
+
+      game.cameraX = Math.max(0, Math.min(worldWidth - W, player.x - W * 0.38));
+      game.confetti = game.confetti.filter(c => {
+        c.x += c.vx; c.y += c.vy; c.vy += 0.1; c.life--;
+        return c.life > 0;
+      });
+    }
+
+    function drawPixelText(text, x, y, color='#fff', align='left', size=1) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.font = `${12*size}px Courier New`;
+      ctx.textAlign = align;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function drawCloud(x, y, scale=1) {
+      ctx.fillStyle = colors.cloud;
+      [[0,10,28],[18,0,34],[42,10,28],[24,16,34]].forEach(c => {
+        ctx.beginPath();
+        ctx.arc(x + c[0]*scale, y + c[1]*scale, c[2]*scale/2, 0, Math.PI*2);
+        ctx.fill();
+      });
+    }
+
+    function drawParallax() {
+      const cam = game.cameraX;
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, colors.sky1);
+      grad.addColorStop(.72, colors.sky2);
+      grad.addColorStop(.73, '#95d77a');
+      grad.addColorStop(1, '#71b466');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0,0,W,H);
+
+      drawCloud(70 - cam*0.15, 110, 1.2);
+      drawCloud(260 - cam*0.18, 145, 1.0);
+      drawCloud(440 - cam*0.12, 100, 1.1);
+      drawCloud(600 - cam*0.16, 160, 0.9);
+
+      const backX = -(cam * 0.3) % 600;
+      for (let i=-1;i<4;i++) {
+        const bx = backX + i*600;
+        ctx.fillStyle = '#cfb596';
+        ctx.fillRect(bx+80, 330, 150, 180);
+        ctx.fillRect(bx+135, 220, 42, 290);
+        ctx.fillRect(bx+310, 350, 200, 160);
+        ctx.fillRect(bx+440, 280, 42, 230);
+        ctx.fillStyle = '#b4493a';
+        ctx.beginPath(); ctx.moveTo(bx+70,330); ctx.lineTo(bx+155,250); ctx.lineTo(bx+240,330); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx+300,350); ctx.lineTo(bx+410,300); ctx.lineTo(bx+520,350); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(bx+430,280); ctx.lineTo(bx+461,240); ctx.lineTo(bx+492,280); ctx.fill();
+        ctx.fillStyle = '#744a38';
+        for (let wx=0; wx<6; wx++) ctx.fillRect(bx+95+wx*20, 365, 10, 18);
+        for (let wx=0; wx<8; wx++) ctx.fillRect(bx+325+wx*22, 385, 10, 16);
+        ctx.fillStyle = '#f6f0d0';
+        ctx.beginPath(); ctx.arc(bx+156, 282, 18, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#4d3729'; ctx.lineWidth = 3; ctx.stroke();
+      }
+    }
+
+    function drawPlatform(p) {
+      const sx = p.x - game.cameraX;
+      ctx.fillStyle = colors.stone;
+      ctx.fillRect(sx, p.y, p.w, p.h);
+      ctx.fillStyle = colors.stoneDark;
+      for (let y = p.y; y < p.y + p.h; y += 22) {
+        for (let x = 0; x < p.w; x += 34) ctx.fillRect(sx + x, y, 32, 20);
+      }
+      ctx.fillStyle = colors.grass;
+      ctx.fillRect(sx, p.y - 7, p.w, 8);
+      ctx.fillStyle = colors.ivy;
+      for (let i = 10; i < p.w; i += 45) {
+        const len = 12 + ((i * 7) % 32);
+        ctx.fillRect(sx + i, p.y + p.h - 2, 4, len);
+      }
+    }
+
+    function drawStar(x, y) {
+      ctx.save();
+      ctx.translate(x - game.cameraX, y + Math.sin((game.time*5 + x) * .6) * 3);
+      ctx.fillStyle = colors.gold;
+      ctx.beginPath();
+      for (let i=0;i<10;i++) {
+        const a = -Math.PI/2 + i*Math.PI/5;
+        const r = i % 2 === 0 ? 10 : 4.5;
+        const px = Math.cos(a) * r, py = Math.sin(a) * r;
+        if (i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = '#8c5b0f'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawDiploma(x, y) {
+      const sx = x - game.cameraX;
+      ctx.save();
+      ctx.translate(sx, y);
+      ctx.rotate(-0.1);
+      ctx.fillStyle = '#f7f0db';
+      ctx.fillRect(-9, -12, 18, 24);
+      ctx.fillStyle = '#d04b55';
+      ctx.fillRect(-11, -2, 22, 4);
+      ctx.restore();
+    }
+
+    function drawEnemy(e) {
+      const x = e.x - game.cameraX, y = e.y;
+      ctx.fillStyle = '#2c2f39';
+      ctx.beginPath();
+      ctx.ellipse(x+13, y+10, 12, 10, 0, 0, Math.PI*2); ctx.fill();
+      const wing = Math.sin(e.flap) > 0 ? 7 : 2;
+      ctx.fillRect(x+2, y+5, 7, wing);
+      ctx.fillRect(x+17, y+5, 7, wing);
+      ctx.fillStyle = '#ffcf62'; ctx.fillRect(x+22, y+9, 5, 3);
+      ctx.fillStyle = '#fff'; ctx.fillRect(x+8, y+7, 3, 3); ctx.fillRect(x+14, y+7, 3, 3);
+      ctx.fillStyle = '#000'; ctx.fillRect(x+9, y+8, 1, 1); ctx.fillRect(x+15, y+8, 1, 1);
+    }
+
+    function drawPlayer() {
+      const x = Math.round(player.x - game.cameraX), y = Math.round(player.y);
+      if (player.invuln > 0 && Math.floor(player.invuln/5) % 2 === 0) return;
+      ctx.save();
+      ctx.translate(x + player.w/2, y + player.h/2);
+      if (player.facing < 0) ctx.scale(-1, 1);
+      ctx.translate(-player.w/2, -player.h/2);
+
+      ctx.fillStyle = colors.red;
+      ctx.fillRect(6, 15, 16, 20);
+      ctx.beginPath(); ctx.moveTo(5,35); ctx.lineTo(14,18); ctx.lineTo(23,35); ctx.fill();
+      ctx.fillStyle = colors.redDark;
+      ctx.fillRect(6, 15, 16, 3);
+      ctx.fillStyle = colors.red;
+      ctx.fillRect(1, 18, 7, 12); ctx.fillRect(20, 18, 7, 12);
+      ctx.fillStyle = '#f7d8bf'; ctx.fillRect(8, 6, 12, 11);
+      ctx.fillStyle = '#6e432e'; ctx.fillRect(6, 4, 16, 5); ctx.fillRect(6, 9, 4, 10); ctx.fillRect(18, 9, 4, 10);
+      ctx.fillStyle = colors.red;
+      ctx.fillRect(6, 2, 16, 4); ctx.fillRect(2, 0, 24, 3);
+      ctx.fillStyle = colors.gold; ctx.fillRect(3, 3, 2, 10);
+      ctx.fillStyle = '#111';
+      const step = player.onGround ? Math.sin(player.step * .18) * 2 : 0;
+      ctx.fillRect(9, 35, 4, 7 + Math.max(0, step));
+      ctx.fillRect(15, 35, 4, 7 - Math.min(0, step));
+      ctx.fillStyle = '#f7f0db'; ctx.fillRect(20, 22, 5, 10);
+      ctx.fillStyle = '#d04b55'; ctx.fillRect(19, 26, 7, 2);
+      ctx.fillStyle = '#161421'; ctx.fillRect(11, 10, 1, 1); ctx.fillRect(16, 10, 1, 1);
+      ctx.restore();
+    }
+
+    function drawGoal() {
+      const x = goal.x - game.cameraX;
+      ctx.fillStyle = '#82644c';
+      ctx.fillRect(x+18, goal.y, 6, goal.h);
+      ctx.fillStyle = game.goalUnlocked ? colors.red : '#686a6f';
+      ctx.beginPath();
+      ctx.moveTo(x+24, goal.y+4); ctx.lineTo(x+72, goal.y+18); ctx.lineTo(x+24, goal.y+32); ctx.fill();
+      ctx.fillStyle = game.goalUnlocked ? colors.gold : '#aaa';
+      ctx.fillRect(x+38, goal.y+15, 10, 8);
+      if (game.goalUnlocked) {
+        ctx.fillStyle = 'rgba(255, 228, 113, 0.28)';
+        ctx.fillRect(x+8, goal.y-8, 80, 46);
+      }
+      ctx.fillStyle = '#704c31';
+      ctx.fillRect(x-34, 282, 95, 190);
+      ctx.fillStyle = '#cdb495';
+      ctx.fillRect(x-26, 295, 80, 165);
+      ctx.fillStyle = '#b54f40';
+      ctx.beginPath(); ctx.moveTo(x-34,295); ctx.lineTo(x+14,246); ctx.lineTo(x+61,295); ctx.fill();
+      ctx.fillStyle = '#f6f0d0';
+      ctx.beginPath(); ctx.arc(x+15, 335, 18, 0, Math.PI*2); ctx.fill();
+      const bellSwing = game.goalUnlocked ? Math.sin(game.bellPhase) * 0.18 : 0;
+      ctx.save();
+      ctx.translate(x+15, 389); ctx.rotate(bellSwing);
+      ctx.fillStyle = '#f0c349'; ctx.fillRect(-10, 0, 20, 18); ctx.fillRect(-14, 16, 28, 5);
+      ctx.restore();
+    }
+
+    function drawHUD() {
+      ctx.fillStyle = 'rgba(18, 20, 43, 0.9)';
+      ctx.fillRect(0, 0, W, 74);
+      ctx.strokeStyle = colors.gold; ctx.lineWidth = 3; ctx.strokeRect(4, 4, W-8, 66);
+      ctx.fillStyle = colors.red; ctx.fillRect(14, 16, 28, 18); ctx.fillRect(10, 12, 36, 6);
+      ctx.fillStyle = '#f7d8bf'; ctx.fillRect(18, 25, 20, 16);
+      ctx.fillStyle = '#6e432e'; ctx.fillRect(16, 23, 24, 6);
+      drawPixelText('NOA LIN', 54, 22, '#fff3cf', 'left', 1.1);
+      drawPixelText("DIPLOMA DASH!", 54, 38, '#f5c54d', 'left', 0.9);
+
+      ctx.fillStyle = '#472336'; ctx.fillRect(150, 18, 90, 12); ctx.fillRect(150, 38, 90, 12);
+      ctx.fillStyle = '#f45c64'; ctx.fillRect(150, 18, 90 * (game.diplomasCollected / diplomas.length), 12);
+      ctx.fillStyle = '#5fc0ff'; ctx.fillRect(150, 38, 90 * (game.starsCollected / stars.length), 12);
+      ctx.strokeStyle = '#f6c34b'; ctx.strokeRect(150, 18, 90, 12); ctx.strokeRect(150, 38, 90, 12);
+      drawPixelText('卷轴', 246, 28, '#fff', 'left', 0.9);
+      drawPixelText('星星', 246, 48, '#fff', 'left', 0.9);
+
+      drawPixelText(`${game.diplomasCollected}/${diplomas.length}`, 308, 24, '#fff3cf', 'left', 1.0);
+      drawPixelText(`${game.starsCollected}/${stars.length}`, 308, 44, '#fff3cf', 'left', 1.0);
+      drawPixelText(`${game.time.toFixed(1)}s`, 390, 24, '#fff3cf', 'right', 1.0);
+      drawPixelText(game.goalUnlocked ? 'GO!' : '收集齐全开门', 390, 44, game.goalUnlocked ? '#8dfc85' : '#fff3cf', 'right', 0.9);
+    }
+
+    function drawMessage() {
+      if (game.messageTimer <= 0) return;
+      ctx.fillStyle = 'rgba(11, 14, 35, 0.78)';
+      ctx.fillRect(40, 92, W-80, 48);
+      ctx.strokeStyle = colors.gold; ctx.lineWidth = 2; ctx.strokeRect(40, 92, W-80, 48);
+      drawPixelText('目标：收集全部卷轴与星星，去钟楼拿毕业旗！', W/2, 122, '#fff3cf', 'center', 0.95);
+    }
+
+    function render() {
+      drawParallax();
+      platforms.forEach(drawPlatform);
+      stars.forEach(s => !s.got && drawStar(s.x, s.y));
+      diplomas.forEach(d => !d.got && drawDiploma(d.x, d.y));
+      drawGoal();
+      enemies.forEach(drawEnemy);
+      drawPlayer();
+
+      for (const c of game.confetti) {
+        ctx.fillStyle = c.c;
+        ctx.fillRect(c.x - game.cameraX, c.y, 4, 4);
+      }
+
+      ctx.fillStyle = '#d24a4a';
+      ctx.fillRect(0, H-118, W, 8);
+      drawHUD();
+      drawMessage();
+
+      if (game.clearFlash > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${Math.min(0.75, game.clearFlash / 240) * 0.15})`;
+        ctx.fillRect(0,0,W,H);
+      }
+    }
+
+    function loop() {
+      update();
+      render();
+      requestAnimationFrame(loop);
+    }
+    loop();
+  </script>
+</body>
+</html>
